@@ -11,7 +11,7 @@ local function mkTag(c)if not c then return end local h=c:FindFirstChild("Head")
 task.spawn(function()while true do if tl and tl.Parent then tl.TextColor3=Color3.fromHSV(tick()%1,1,1)end RS.RenderStepped:Wait()end end)
 local function hC(c)if not c then return end task.spawn(function()c:WaitForChild("Head",10)mkTag(c)end)end
 hC(plr.Character or plr.CharacterAdded:Wait())plr.CharacterAdded:Connect(hC)
-local W,H=280,370
+local W,H=280,410
 local gui=Instance.new("ScreenGui",gp())gui.Name="ShinobiHub"gui.ResetOnSpawn=false gui.IgnoreGuiInset=true gui.DisplayOrder=999999
 local fr=Instance.new("Frame",gui)fr.Size=UDim2.new(0,W,0,H)fr.Position=UDim2.new(0.5,-W/2,0.5,-H/2)fr.BackgroundColor3=Color3.fromRGB(6,6,10)fr.BorderSizePixel=0 fr.Active=true fr.Draggable=true
 Instance.new("UICorner",fr).CornerRadius=UDim.new(0,16)
@@ -40,6 +40,7 @@ mB.MouseButton1Click:Connect(function()sOff()fr.Visible=false mi.Visible=true en
 mi.MouseButton1Click:Connect(function()sOn()mi.Visible=false fr.Visible=true end)
 local function mBtn(p,t,y,c)local b=Instance.new("TextButton",p)b.Size=UDim2.new(1,0,0,34)b.Position=UDim2.new(0,0,0,y)b.BackgroundColor3=c or Color3.fromRGB(120,10,15)b.TextColor3=Color3.fromRGB(255,255,255)b.Text=t b.TextSize=12 b.Font=Enum.Font.GothamBlack b.AutoButtonColor=false Instance.new("UICorner",b).CornerRadius=UDim.new(0,10)local s=Instance.new("UIStroke",b)s.Color=Color3.fromRGB(255,40,50)s.Thickness=1 s.Transparency=.4 return b end
 local function mL(p,t,y,c,s)local l=Instance.new("TextLabel",p)l.Size=UDim2.new(1,0,0,18)l.Position=UDim2.new(0,0,0,y)l.BackgroundTransparency=1 l.Text=t l.TextColor3=c or Color3.fromRGB(180,180,190)l.TextSize=s or 10 l.Font=Enum.Font.GothamBold return l end
+-- ABA SPEED
 local spd=mBtn(pages[1],"⚡ Speed Bypass: OFF",0)
 local vL=mL(pages[1],"Velocidade: 120",44,Color3.fromRGB(255,255,255),12)
 local sBg=Instance.new("Frame",pages[1])sBg.Size=UDim2.new(1,0,0,14)sBg.Position=UDim2.new(0,0,0,70)sBg.BackgroundColor3=Color3.fromRGB(50,40,25)sBg.BorderSizePixel=0
@@ -49,10 +50,14 @@ Instance.new("UICorner",sF).CornerRadius=UDim.new(1,0)
 local sK=Instance.new("Frame",sBg)sK.Size=UDim2.new(0,22,0,22)sK.Position=UDim2.new(.36,-11,.5,-11)sK.BackgroundColor3=Color3.fromRGB(255,255,255)sK.BorderSizePixel=0 sK.ZIndex=2
 Instance.new("UICorner",sK).CornerRadius=UDim.new(1,0)
 local maxB=mBtn(pages[1],"🔥 MÁXIMO (300)",96,Color3.fromRGB(180,60,10))maxB.TextSize=11
-local st1=mL(pages[1],"Pronto",136)
+-- DESYNC
+local dsB=mBtn(pages[1],"🌐 Desync: OFF",134,Color3.fromRGB(60,50,20))
+local st1=mL(pages[1],"Pronto",174)
+-- ABA HIT
 local tpB=mBtn(pages[2],"⚔ TP: OFF",0)
 local fvB=mBtn(pages[2],"👁 FOV 120: OFF",38,Color3.fromRGB(60,50,20))
 local st2=mL(pages[2],"Destino: 543, 71, -369",76)
+-- ABA EXTRAS
 local grB=mBtn(pages[3],"🎯 Instant Grab: OFF",0,Color3.fromRGB(60,50,20))
 local fbB=mBtn(pages[3],"⚡ FPS Boost: OFF",38)
 local rx2=mBtn(pages[3],"🏔️ RTX: OFF",76,Color3.fromRGB(60,50,20))
@@ -62,14 +67,31 @@ local hC2,aC,cC,oI,mt
 local TP_POS=Vector3.new(543,71,-369)
 local SLOW_RADIUS=120
 local SLOW_MIN=40
-local function hook()if mt then return end if not getrawmetatable then return end pcall(function()local m=getrawmetatable(game)oI=m.__index setreadonly(m,false)m.__index=newcclosure(function(s,k)if not checkcaller()then if k=="WalkSpeed"and speedOn and typeof(s)=="Instance"and s:IsA("Humanoid")then local c=plr.Character if c and s:IsDescendantOf(c)then return 16 end end end return oI(s,k)end)setreadonly(m,true)mt=true end)end
+-- DESYNC vars
+local dsOn=false
+local dsCF=CFrame.new()
+local dsLoop=nil
+local function hook()if mt then return end if not getrawmetatable then return end pcall(function()local m=getrawmetatable(game)oI=m.__index setreadonly(m,false)m.__index=newcclosure(function(s,k)if not checkcaller()then if k=="WalkSpeed"and speedOn and typeof(s)=="Instance"and s:IsA("Humanoid")then local c=plr.Character if c and s:IsDescendantOf(c)then return 16 end end if k=="CFrame"and dsOn and typeof(s)=="Instance"and s.Name=="HumanoidRootPart"then local c=plr.Character if c and s:IsDescendantOf(c)then return dsCF end end end return oI(s,k)end)setreadonly(m,true)mt=true end)end
+local function dsStart()
+    if dsLoop then return end
+    dsLoop=RS.Heartbeat:Connect(function()
+        if not dsOn then return end
+        local c=plr.Character if not c then return end
+        local r=c:FindFirstChild("HumanoidRootPart")if not r then return end
+        dsCF=r.CFrame
+    end)
+end
+local function dsStop()
+    if dsLoop then dsLoop:Disconnect()dsLoop=nil end
+end
 local function anim(c)if not c then return end local h=c:WaitForChild("Humanoid",5)if not h then return end local a=h:FindFirstChildOfClass("Animator")if not a then return end if aC then aC:Disconnect()end aC=a.AnimationPlayed:Connect(function(t)if not speedOn then return end local n=string.lower(t.Name)if string.find(n,"run")or string.find(n,"walk")then pcall(function()t:Stop(.1)end)end end)end
 local function stSp()
 local c=plr.Character if c then local h=c:FindFirstChildOfClass("Humanoid")if h then h.WalkSpeed=spdVal end end anim(c)
 if hC2 then hC2:Disconnect()end
 hC2=RS.Heartbeat:Connect(function()if not speedOn then return end local ch=plr.Character if not ch then return end local h=ch:FindFirstChildOfClass("Humanoid")local r=ch:FindFirstChild("HumanoidRootPart")if not h then return end if h.Health<h.MaxHealth then pcall(function()h.Health=h.MaxHealth end)end local target=spdVal if r then local dist=(r.Position-TP_POS).Magnitude if dist<SLOW_RADIUS then target=SLOW_MIN+(spdVal-SLOW_MIN)*(dist/SLOW_RADIUS)end end if math.abs(h.WalkSpeed-target)>2 then h.WalkSpeed=target end end)
 if cC then cC:Disconnect()end cC=plr.CharacterAdded:Connect(function(ch)task.wait(.5)if speedOn then local h=ch:FindFirstChildOfClass("Humanoid")if h then h.WalkSpeed=spdVal end anim(ch)end end)end
-spd.MouseButton1Click:Connect(function()speedOn=not speedOn if speedOn then sOn()hook()spd.BackgroundColor3=Color3.fromRGB(20,160,60)spd.Text="⚡ Speed Bypass: ON"st1.Text="Slow antes da chegada ativo"st1.TextColor3=Color3.fromRGB(80,220,130)stSp()else sOff()spd.BackgroundColor3=Color3.fromRGB(120,10,15)spd.Text="⚡ Speed Bypass: OFF"st1.Text="Speed off"st1.TextColor3=Color3.fromRGB(180,180,190)if hC2 then hC2:Disconnect()hC2=nil end local c=plr.Character if c then local h=c:FindFirstChildOfClass("Humanoid")if h then h.WalkSpeed=16 end end end end)
+spd.MouseButton1Click:Connect(function()speedOn=not speedOn if speedOn then sOn()hook()spd.BackgroundColor3=Color3.fromRGB(20,160,60)spd.Text="⚡ Speed Bypass: ON"st1.Text="Slow + Speed ativos"st1.TextColor3=Color3.fromRGB(80,220,130)stSp()else sOff()spd.BackgroundColor3=Color3.fromRGB(120,10,15)spd.Text="⚡ Speed Bypass: OFF"st1.Text="Speed off"st1.TextColor3=Color3.fromRGB(180,180,190)if hC2 then hC2:Disconnect()hC2=nil end local c=plr.Character if c then local h=c:FindFirstChildOfClass("Humanoid")if h then h.WalkSpeed=16 end end end end)
+dsB.MouseButton1Click:Connect(function()dsOn=not dsOn if dsOn then sOn()dsStart()dsB.BackgroundColor3=Color3.fromRGB(20,160,60)dsB.Text="🌐 Desync: ON"st1.Text="Desync ativo"st1.TextColor3=Color3.fromRGB(80,220,180)else sOff()dsStop()dsB.BackgroundColor3=Color3.fromRGB(60,50,20)dsB.Text="🌐 Desync: OFF"st1.Text="Desync off"st1.TextColor3=Color3.fromRGB(180,180,190)end end)
 maxB.MouseButton1Click:Connect(function()spdVal=300 vL.Text="Velocidade: 300"sF.Size=UDim2.new(1,0,1,0)sK.Position=UDim2.new(1,-11,.5,-11)S("5232182059",.08,1.6)st1.Text="🔥 Máximo: 300"st1.TextColor3=Color3.fromRGB(255,180,50)if speedOn then local c=plr.Character if c then local h=c:FindFirstChildOfClass("Humanoid")if h then h.WalkSpeed=300 end end end end)
 local dr=false
 local function upd(p)local v=math.floor(MI+(MA-MI)*p)spdVal=v vL.Text="Velocidade: "..v sF.Size=UDim2.new(p,0,1,0)sK.Position=UDim2.new(p,-11,.5,-11)end
@@ -104,4 +126,4 @@ local function kO(v)local c=v.Parent while c do if c==plr.Character then return 
 fbB.MouseButton1Click:Connect(function()fbOn=not fbOn if fbOn then sOn()fbB.BackgroundColor3=Color3.fromRGB(20,160,60)fbB.Text="⚡ FPS Boost: ON"st3.Text="Gráficos leves"LG.Ambient=Color3.fromRGB(150,150,150)LG.Brightness=2 LG.GlobalShadows=false LG.FogEnd=1000000 LG.FogStart=1000000 for _,v in ipairs(workspace:GetDescendants())do kO(v)end for _,v in ipairs(LG:GetChildren())do if v:IsA("Atmosphere")or v:IsA("PostEffect")then pcall(function()v.Enabled=false end)end end else sOff()fbB.BackgroundColor3=Color3.fromRGB(120,10,15)fbB.Text="⚡ FPS Boost: OFF"st3.Text="Pronto"LG.Ambient=Color3.fromRGB(70,70,78)LG.Brightness=3 LG.GlobalShadows=true LG.FogEnd=100000 for _,v in ipairs(LG:GetChildren())do if v:IsA("Atmosphere")or v:IsA("PostEffect")then pcall(function()v.Enabled=true end)end end end end)
 st(1)
 sOn()
-print("🗡️ ShinobiHub — By:christisloveisnx")
+print("🗡️ ShinobiHub + Desync — By:christisloveisnx")
