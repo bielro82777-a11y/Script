@@ -1,429 +1,487 @@
---==============================================================
--- TrueChad Hub
--- By: @christisloveisnx
---==============================================================
-print("[HUB] Iniciando...")
-
+--[[ tuntung Hub — BLOCO 1/3 | CORE ]]
+print("[1] BEGIN")
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
-local SoundService = game:GetService("SoundService")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
-local RS = game:GetService("ReplicatedStorage")
-local WS = game:GetService("Workspace")
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
+local LP = Players.LocalPlayer
+local PG = LP:WaitForChild("PlayerGui", 10)
 
-local G = getgenv and getgenv() or _G
-G.TrueChadHub = G.TrueChadHub or {}
+for _, p in ipairs({CoreGui, PG}) do
+    local o = p:FindFirstChild("TuntungHubGui")
+    if o then o:Destroy() end
+end
 
-local CFG = {
-    MUSIC_ID = "rbxassetid://110919391228823",
-    MUSIC_VOL = 0.5,
-    ALERT_SOUND = "rbxassetid://127859692805098",
-    ALERT_VOL = 0.6,
-    ALERT_DURATION = 10,
-    ALERT_COOLDOWN = 15,
-    Base = Vector3.new(545.8, 70.6, -367.4),
-    SpeedUp = 40,
-    GrabRadius = 40,
-    MaxPerBiome = 10,
-    GodHealth = 1e9,
-    RiseHeight = 15,
+local CONFIG = {
+    ScanInterval=60, FlySpeed=500, ArriveDistance=5,
+    PreviewSize=54, MaxRows=40,
+    FixedDest=Vector3.new(33.1,-81.3,-534.5),
+    UpStuds=50, WaitBeforeCollect=1, HoldTime=1,
+}
+local THEME = {
+    Bg=Color3.fromRGB(16,16,20), Bg2=Color3.fromRGB(24,24,30), Bg3=Color3.fromRGB(34,34,42),
+    Accent=Color3.fromRGB(120,200,255), Gold=Color3.fromRGB(255,200,80),
+    Text=Color3.fromRGB(235,235,235), TextDim=Color3.fromRGB(150,150,160),
+    Good=Color3.fromRGB(90,220,130), Bad=Color3.fromRGB(255,90,90),
+    Warn=Color3.fromRGB(255,170,80),
 }
 
-local TH = {
-    Blue=Color3.fromRGB(60,150,255), BlueLight=Color3.fromRGB(120,190,255),
-    BgDark=Color3.fromRGB(10,18,35), Card=Color3.fromRGB(20,35,60),
-    Cyan=Color3.fromRGB(80,220,255), White=Color3.fromRGB(235,245,255),
-    Gray=Color3.fromRGB(130,160,200), Green=Color3.fromRGB(60,180,90),
-    GreenL=Color3.fromRGB(100,240,130), Red=Color3.fromRGB(200,50,50),
-    CardActive=Color3.fromRGB(40,90,160), CreditBg=Color3.fromRGB(15,40,90),
-}
+local function getHRP() local c=LP.Character; return c and c:FindFirstChild("HumanoidRootPart") end
+local function isAlive() local h=LP.Character and LP.Character:FindFirstChildOfClass("Humanoid"); return h and h.Health>0 end
 
-local RC = {
-    Divine=Color3.fromRGB(255,220,80), Eternal=Color3.fromRGB(255,140,60),
-    Secret=Color3.fromRGB(255,255,255), Cosmic=Color3.fromRGB(90,150,255),
-    Mythic=Color3.fromRGB(230,90,180), Legendary=Color3.fromRGB(255,200,60),
-    Epic=Color3.fromRGB(180,90,220), Rare=Color3.fromRGB(90,200,220),
-    Uncommon=Color3.fromRGB(100,220,130), Common=Color3.fromRGB(180,180,180),
-}
+local function cleanName(raw)
+    if type(raw) ~= "string" then raw = tostring(raw) end
+    local s = raw
+    s = s:gsub("^[Pp]et[%s_%-]+",""):gsub("^[Ee]gg[%s_%-]+","")
+    s = s:gsub("[_%-]+"," ")
+    s = s:gsub("(%a)([%w']*)", function(a,b) return a:upper()..b:lower() end)
+    s = s:gsub("%s+"," "):gsub("^%s+",""):gsub("%s+$","")
+    if s == "" then s = raw end
+    return s
+end
 
-local BIOMES = {
-    {n="Forest",x=593},{n="Lake",x=720},{n="Desert",x=897},{n="Jungle",x=1143},
-    {n="Snow",x=1428},{n="Volcano",x=1778},{n="Ocean",x=2218},{n="Prehistoric",x=2757},
-    {n="Cosmic",x=3376},{n="Cherry Blossom",x=3999},{n="Titan Temple",x=4759},{n="Angels & Demons",x=5620},
-}
-
-local function new(c,p,par) local o=Instance.new(c) for k,v in pairs(p) do o[k]=v end o.Parent=par return o end
-local function round(o,r) new("UICorner",{CornerRadius=UDim.new(0,r)},o) end
-local function outline(o,c,t) new("UIStroke",{Color=c,Thickness=t or 1},o) end
-
---==============================================================
--- 🎬 LOADING
---==============================================================
-pcall(function() if CoreGui:FindFirstChild("TrueChadLoading") then CoreGui.TrueChadLoading:Destroy() end end)
-local LG = new("ScreenGui",{Name="TrueChadLoading",ResetOnSpawn=false,IgnoreGuiInset=true,DisplayOrder=99999},(gethui and gethui()) or playerGui)
-new("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=Color3.fromRGB(0,0,0),BorderSizePixel=0},LG)
-
-local BB = new("Frame",{Size=UDim2.new(0,320,0,120),Position=UDim2.new(0.5,-160,0.5,-60),BackgroundColor3=Color3.fromRGB(30,90,180),BorderSizePixel=0},LG)
-round(BB,12)
-local BS = new("UIStroke",{Color=Color3.fromRGB(60,150,255),Thickness=2},BB)
-local MT = new("TextLabel",{Size=UDim2.new(1,-20,0,45),Position=UDim2.new(0,10,0.5,-35),BackgroundTransparency=1,Text="By:@christisloveisnx",TextColor3=Color3.fromRGB(255,255,255),TextSize=26,Font=Enum.Font.GothamBlack},BB)
-local ST = new("TextLabel",{Size=UDim2.new(1,-20,0,25),Position=UDim2.new(0,10,0.5,15),BackgroundTransparency=1,Text="in tik tok",TextColor3=Color3.fromRGB(180,200,230),TextSize=16,Font=Enum.Font.GothamSemibold},BB)
-
-task.wait(3)
-TweenService:Create(BB,TweenInfo.new(0.6),{BackgroundTransparency=1}):Play()
-TweenService:Create(BS,TweenInfo.new(0.6),{Transparency=1}):Play()
-TweenService:Create(MT,TweenInfo.new(0.6),{TextTransparency=1}):Play()
-TweenService:Create(ST,TweenInfo.new(0.6),{TextTransparency=1}):Play()
-task.wait(0.6)
-
-local CL = new("TextLabel",{Size=UDim2.new(1,-40,0,100),Position=UDim2.new(0,20,0.5,-50),BackgroundTransparency=1,Text="",TextSize=48,Font=Enum.Font.GothamBlack,TextXAlignment=Enum.TextXAlignment.Center,TextYAlignment=Enum.TextYAlignment.Center},LG)
-local function showN(n,col) CL.Text="miusic in: "..n CL.TextColor3=col CL.TextSize=70 TweenService:Create(CL,TweenInfo.new(0.25,Enum.EasingStyle.Back),{TextSize=48}):Play() task.wait(1) end
-showN(3,Color3.fromRGB(60,220,100))
-showN(2,Color3.fromRGB(255,210,60))
-showN(1,Color3.fromRGB(220,40,40))
-TweenService:Create(CL,TweenInfo.new(0.4),{TextTransparency=1}):Play()
-task.wait(0.4)
-LG:Destroy()
-print("[HUB] Loading OK")
-
---==============================================================
--- 🎵 MÚSICA
---==============================================================
-local oldM = SoundService:FindFirstChild("TrueChadMusic")
-if oldM then oldM:Destroy() end
-local Music = Instance.new("Sound")
-Music.Name = "TrueChadMusic"
-Music.SoundId = CFG.MUSIC_ID
-Music.Volume = CFG.MUSIC_VOL
-Music.Looped = true
-Music.Parent = SoundService
-Music:Play()
-G.TrueChadHub.Music = Music
-print("[HUB] Music OK")
-
---==============================================================
--- MÓDULOS
---==============================================================
-local Modules = {}
-G.TrueChadHub.Modules = Modules
-local function loadMod(path)
-    local obj = RS
-    for _, s in ipairs(path) do
-        obj = obj and obj:FindFirstChild(s)
-        if not obj then return nil end
+local function getPos(inst)
+    if not inst or not inst.Parent then return nil end
+    if inst:IsA("BasePart") then return inst.Position end
+    if inst:IsA("Model") then
+        if inst.PrimaryPart then return inst.PrimaryPart.Position end
+        local p = inst:FindFirstChildWhichIsA("BasePart", true)
+        return p and p.Position or nil
     end
-    local ok, m = pcall(require, obj)
-    return ok and m or nil
-end
-task.spawn(function()
-    for i = 1, 30 do
-        if not Modules.EggState then Modules.EggState = loadMod({"Client","EggState"}) end
-        if not Modules.Assets then Modules.Assets = loadMod({"Data","Assets"}) end
-        if Modules.EggState and Modules.Assets then break end
-        task.wait(0.5)
-    end
-    print("[HUB] EggState:", Modules.EggState ~= nil, "Assets:", Modules.Assets ~= nil)
-end)
-
---==============================================================
--- HELPERS
---==============================================================
-local function getHRP()
-    local c = player.Character
-    if not c then return nil, nil end
-    return c, c:FindFirstChild("HumanoidRootPart")
-end
-G.TrueChadHub.getHRP = getHRP
-
-local function getBiome(pos)
-    if not pos then return "?" end
-    local best, bd = "?", math.huge
-    for _, b in ipairs(BIOMES) do
-        local d = math.abs(pos.X - b.x)
-        if d < bd then bd, best = d, b.n end
-    end
-    return best
+    return nil
 end
 
-local function assetInfo(cat)
-    local dir = Modules.Assets and Modules.Assets.Directory
-    local raw = type(dir) == "table" and dir[cat] or nil
-    local rar = type(raw) == "table" and raw.Rarity or nil
-    local rn, col = "Common", Color3.fromRGB(255,255,255)
-    if type(rar) == "table" then
-        rn = tostring(rar.DisplayName or rar._id or "Common")
-        if typeof(rar.Color) == "Color3" then col = rar.Color end
-    end
-    if RC[rn] then col = RC[rn] end
-    local nm = tostring(raw and (raw.DisplayName or cat) or cat)
-    local ic = type(raw) == "table" and raw.Icon or nil
-    if ic and tonumber(ic) then ic = "rbxassetid://"..tostring(ic) end
-    return {Name=nm, Rarity=rn, Color=col, Icon=ic}
-end
-
-local function stateOK(s)
-    if s == nil then return true end
-    if type(s) ~= "string" then return true end
-    if s:lower() == "carried" then return false end
-    return true
-end
-
-local function readEggs()
-    local E = Modules.EggState
-    if type(E) ~= "table" or type(E.ReadFieldEggs) ~= "function" then return nil end
-    local ok, r = pcall(E.ReadFieldEggs)
-    if not ok or type(r) ~= "table" or type(r.Records) ~= "table" then return nil end
-    return r.Records
-end
-
---==============================================================
--- 🎨 GUI
---==============================================================
-pcall(function() if CoreGui:FindFirstChild("TrueChadHub") then CoreGui.TrueChadHub:Destroy() end end)
-
-local SG = new("ScreenGui",{Name="TrueChadHub",ResetOnSpawn=false,IgnoreGuiInset=true,DisplayOrder=999},(gethui and gethui()) or playerGui)
-
-local TB = new("TextButton",{
-    Size=UDim2.new(0,60,0,60),Position=UDim2.new(0,20,0.5,-30),
-    BackgroundColor3=Color3.fromRGB(20,40,80),BorderSizePixel=0,
-    Text="🥚",TextSize=28,TextColor3=Color3.fromRGB(255,255,255),
-    Font=Enum.Font.GothamBold,AutoButtonColor=false,Draggable=true,Active=true,
-},SG)
-round(TB,30) outline(TB,TH.Blue,2)
-
-local PN = new("Frame",{
-    Size=UDim2.new(0,340,0,700),Position=UDim2.new(0,90,0.5,-350),
-    BackgroundColor3=TH.BgDark,BorderSizePixel=0,ClipsDescendants=true,
-    Visible=false,Draggable=true,Active=true,
-},SG)
-round(PN,12) outline(PN,TH.Blue,1.5)
-
-local HD = new("Frame",{Size=UDim2.new(1,0,0,50),BackgroundColor3=Color3.fromRGB(15,25,45),BorderSizePixel=0},PN)
-round(HD,12)
-
-new("TextLabel",{Size=UDim2.new(1,-50,0,22),Position=UDim2.new(0,15,0,6),BackgroundTransparency=1,Text="TrueChad Hub",TextColor3=TH.Blue,TextSize=16,Font=Enum.Font.GothamBlack,TextXAlignment=Enum.TextXAlignment.Left},HD)
-new("TextLabel",{Size=UDim2.new(1,-50,0,14),Position=UDim2.new(0,15,0,28),BackgroundTransparency=1,Text="By:@christisloveisnx",TextColor3=TH.Gray,TextSize=10,Font=Enum.Font.Gotham,TextXAlignment=Enum.TextXAlignment.Left},HD)
-
-local CB = new("TextButton",{Size=UDim2.new(0,30,0,30),Position=UDim2.new(1,-40,0,10),BackgroundColor3=Color3.fromRGB(180,60,60),Text="✕",TextColor3=Color3.fromRGB(255,255,255),TextSize=14,Font=Enum.Font.GothamBold,BorderSizePixel=0,AutoButtonColor=false},HD)
-round(CB,8)
-
-local SC = new("ScrollingFrame",{Size=UDim2.new(1,-20,1,-70),Position=UDim2.new(0,10,0,60),BackgroundTransparency=1,BorderSizePixel=0,ScrollBarThickness=4,ScrollBarImageColor3=TH.Blue,CanvasSize=UDim2.new(0,0,0,0),AutomaticCanvasSize=Enum.AutomaticSize.Y},PN)
-new("UIListLayout",{Padding=UDim.new(0,6),SortOrder=Enum.SortOrder.LayoutOrder},SC)
-new("UIPadding",{PaddingTop=UDim.new(0,5),PaddingBottom=UDim.new(0,10)},SC)
-
--- Crédito
-new("TextLabel",{Size=UDim2.new(1,0,0,22),BackgroundTransparency=1,Text="⚙️ Sistema",TextColor3=TH.Gray,TextSize=11,Font=Enum.Font.GothamBold,TextXAlignment=Enum.TextXAlignment.Left,LayoutOrder=0},SC)
-
-local CR = new("Frame",{Size=UDim2.new(1,0,0,44),BackgroundColor3=TH.CreditBg,BackgroundTransparency=0.15,BorderSizePixel=0,LayoutOrder=1},SC)
-round(CR,8) outline(CR,TH.Blue,1.5)
-new("ImageLabel",{Size=UDim2.fromOffset(32,32),Position=UDim2.new(0,8,0.5,-16),BackgroundTransparency=1,Image="rbxassetid://84157643184125",ImageColor3=Color3.fromRGB(60,150,255),ScaleType=Enum.ScaleType.Fit},CR)
-new("TextLabel",{Size=UDim2.new(1,-95,1,0),Position=UDim2.new(0,48,0,0),BackgroundTransparency=1,Text="By:@christisloveisnx",TextColor3=Color3.fromRGB(60,150,255),TextSize=14,Font=Enum.Font.GothamBold,TextXAlignment=Enum.TextXAlignment.Center},CR)
-new("ImageLabel",{Size=UDim2.fromOffset(32,32),Position=UDim2.new(1,-40,0.5,-16),BackgroundTransparency=1,Image="rbxassetid://84157643184125",ImageColor3=Color3.fromRGB(60,150,255),ScaleType=Enum.ScaleType.Fit},CR)
-
--- Música
-new("TextLabel",{Size=UDim2.new(1,0,0,22),BackgroundTransparency=1,Text="🎵 Música",TextColor3=TH.Cyan,TextSize=11,Font=Enum.Font.GothamBold,TextXAlignment=Enum.TextXAlignment.Left,LayoutOrder=2},SC)
-local MB = new("TextButton",{Size=UDim2.new(1,0,0,36),BackgroundColor3=TH.Green,BorderSizePixel=0,Text="🎵 Música: ON",TextColor3=Color3.fromRGB(255,255,255),TextSize=13,Font=Enum.Font.GothamBold,AutoButtonColor=false,LayoutOrder=3},SC)
-round(MB,10) outline(MB,TH.GreenL,1.5)
-MB.MouseButton1Click:Connect(function()
-    if Music.IsPlaying then
-        Music:Pause() MB.BackgroundColor3=TH.Red MB.Text="🎵 Música: OFF"
-    else
-        Music:Resume() MB.BackgroundColor3=TH.Green MB.Text="🎵 Música: ON"
-    end
-end)
-
--- Velocidade
-new("TextLabel",{Size=UDim2.new(1,0,0,22),BackgroundTransparency=1,Text="⚡ Velocidade",TextColor3=TH.Cyan,TextSize=11,Font=Enum.Font.GothamBold,TextXAlignment=Enum.TextXAlignment.Left,LayoutOrder=10},SC)
-local SpdCont = new("Frame",{Size=UDim2.new(1,0,0,42),BackgroundTransparency=1,LayoutOrder=11},SC)
-new("UIListLayout",{Padding=UDim.new(0,4),FillDirection=Enum.FillDirection.Horizontal},SpdCont)
-
-G.TrueChadHub.Speed = 250
-local SpdLbl = new("TextLabel",{Size=UDim2.new(1,0,0,18),BackgroundTransparency=1,Text="⚡ Atual: 250",TextColor3=TH.GreenL,TextSize=10,Font=Enum.Font.GothamBold,TextXAlignment=Enum.TextXAlignment.Left,LayoutOrder=12},SC)
-
-for _, spd in ipairs({100,150,200,250,287,300,350,400}) do
-    local b = new("TextButton",{Size=UDim2.new(0,50,1,0),BackgroundColor3=spd==250 and TH.Green or TH.Card,Text=tostring(spd),TextColor3=Color3.fromRGB(255,255,255),TextSize=10,Font=Enum.Font.GothamBold,BorderSizePixel=0,AutoButtonColor=false},SpdCont)
-    round(b,8)
-    b.MouseButton1Click:Connect(function()
-        G.TrueChadHub.Speed = spd
-        SpdLbl.Text = "⚡ Atual: " .. spd
-        for _, btn in ipairs(SpdCont:GetChildren()) do
-            if btn:IsA("TextButton") then
-                btn.BackgroundColor3 = (btn.Text == tostring(spd)) and TH.Green or TH.Card
+local function scanPets()
+    local list = {}
+    pcall(function()
+        for _, inst in ipairs(Workspace:GetDescendants()) do
+            if (inst:IsA("Model") or inst:IsA("BasePart")) and not inst:IsA("Accessory") then
+                local nm = inst.Name:lower()
+                local isPet = nm:find("pet",1,true) or nm:find("egg",1,true)
+                local hasPrompt = false
+                if not isPet then
+                    hasPrompt = inst:FindFirstChildOfClass("ProximityPrompt") ~= nil
+                        or inst:FindFirstChildWhichIsA("ProximityPrompt", true) ~= nil
+                end
+                if isPet or hasPrompt then
+                    local skip = false
+                    local cur = inst
+                    local d = 0
+                    while cur and cur ~= Workspace and d < 5 do
+                        local n = cur.Name:lower()
+                        if n:find("merchant",1,true) or n:find("vendor",1,true)
+                        or n:find("shop",1,true) or n:find("npc",1,true) then
+                            skip = true; break
+                        end
+                        cur = cur.Parent; d = d + 1
+                    end
+                    if not skip then
+                        local pos = getPos(inst)
+                        if pos then
+                            table.insert(list, {
+                                Uid = inst:GetFullName(),
+                                Instance = inst,
+                                Model = inst:IsA("Model") and inst or nil,
+                                Name = cleanName(inst.Name),
+                                Rarity = "Common", RarityNum = 1000,
+                                Color = THEME.Gold,
+                                Position = pos,
+                            })
+                        end
+                    end
+                end
             end
         end
     end)
+    table.sort(list, function(a,b)
+        return tostring(a.Name) < tostring(b.Name)
+    end)
+    return list
 end
 
--- Filtros
-new("TextLabel",{Size=UDim2.new(1,0,0,22),BackgroundTransparency=1,Text="🌍 Filtros",TextColor3=TH.Cyan,TextSize=11,Font=Enum.Font.GothamBold,TextXAlignment=Enum.TextXAlignment.Left,LayoutOrder=20},SC)
-local FC = new("ScrollingFrame",{Size=UDim2.new(1,0,0,42),BackgroundColor3=Color3.fromRGB(15,25,45),BackgroundTransparency=0.3,BorderSizePixel=0,ScrollBarThickness=3,ScrollBarImageColor3=TH.Blue,CanvasSize=UDim2.new(0,0,0,0),AutomaticCanvasSize=Enum.AutomaticSize.X,ScrollingDirection=Enum.ScrollingDirection.X,LayoutOrder=21},SC)
-round(FC,8)
-new("UIListLayout",{Padding=UDim.new(0,4),FillDirection=Enum.FillDirection.Horizontal},FC)
-new("UIPadding",{PaddingLeft=UDim.new(0,4),PaddingRight=UDim.new(0,4),PaddingTop=UDim.new(0,4)},FC)
+_G.Tuntung = {
+    Players=Players, RunService=RunService, UserInputService=UserInputService,
+    Workspace=Workspace, CoreGui=CoreGui, LP=LP, PlayerGui=PG,
+    CONFIG=CONFIG, THEME=THEME,
+    getHRP=getHRP, isAlive=isAlive, scanEggs=scanPets, getPos=getPos,
+    _conns={}, _hl={}, UI={}, currentEggs={}, currentTrip=false,
+}
+_G.Tuntung.track = function(c) table.insert(_G.Tuntung._conns, c); return c end
 
-G.TrueChadHub.Filter = "TODOS"
-G.TrueChadHub.FB = {}
-local function sfb(b,ac)
-    if ac then b.BackgroundColor3=TH.CardActive b.TextColor3=Color3.fromRGB(255,255,255)
-    else b.BackgroundColor3=TH.Card b.TextColor3=Color3.fromRGB(180,210,255) end
+print("[1] OK → execute BLOCO 2")--[[ tuntung Hub — BLOCO 2/3 | GUI ]]
+print("[2] BEGIN")
+local T = _G.Tuntung
+if not T then warn("[2] rode BLOCO 1"); return end
+local CONFIG, THEME = T.CONFIG, T.THEME
+local CoreGui, PG = T.CoreGui, T.PlayerGui
+
+for _, p in ipairs({CoreGui, PG}) do
+    local o = p:FindFirstChild("TuntungHubGui")
+    if o then o:Destroy() end
 end
 
-local AB = new("TextButton",{Size=UDim2.new(0,60,0,34),BackgroundColor3=TH.CardActive,BorderSizePixel=0,Text="TODOS",TextColor3=Color3.fromRGB(255,255,255),TextSize=10,Font=Enum.Font.GothamBold,AutoButtonColor=false,LayoutOrder=0},FC)
-round(AB,8)
-G.TrueChadHub.FB["TODOS"] = AB
-AB.MouseButton1Click:Connect(function()
-    G.TrueChadHub.Filter = "TODOS"
-    for k, b in pairs(G.TrueChadHub.FB) do sfb(b, k == "TODOS") end
+local gui = Instance.new("ScreenGui")
+gui.Name = "TuntungHubGui"; gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true; gui.DisplayOrder = 99999
+local ok = pcall(function() gui.Parent = CoreGui end)
+if not ok or not gui.Parent then gui.Parent = PG end
+print("[2] parent =", gui.Parent and gui.Parent:GetFullName() or "NIL")
+
+local function new(class, props, parent)
+    local o = Instance.new(class)
+    for k, v in pairs(props) do o[k] = v end
+    if parent then o.Parent = parent end
+    return o
+end
+local function round(o, r)
+    local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, r); c.Parent = o
+end
+local function stroke(o, color, t, tr)
+    local s = Instance.new("UIStroke")
+    s.Color = color; s.Thickness = t or 1; s.Transparency = tr or 0; s.Parent = o
+end
+
+local main = new("Frame", {Name="Main", Size=UDim2.new(0,340,0,460),
+    Position=UDim2.new(0,20,0,70), BackgroundColor3=THEME.Bg,
+    BorderSizePixel=0, Active=true, ClipsDescendants=true}, gui)
+round(main, 14); stroke(main, THEME.Accent, 1, 0.5)
+
+local tb = new("Frame", {Size=UDim2.new(1,0,0,48), BackgroundColor3=THEME.Bg2, BorderSizePixel=0}, main)
+round(tb, 14)
+new("Frame", {Size=UDim2.new(1,0,0,16), Position=UDim2.new(0,0,1,-16),
+    BackgroundColor3=THEME.Bg2, BorderSizePixel=0}, tb)
+
+local logo = new("Frame", {Size=UDim2.new(0,30,0,30), Position=UDim2.new(0,12,0,9),
+    BackgroundColor3=Color3.fromRGB(255,255,255), BorderSizePixel=0}, tb)
+round(logo, 8)
+new("ImageLabel", {BackgroundTransparency=1, Size=UDim2.fromScale(0.9,0.9),
+    Position=UDim2.fromScale(0.05,0.05), Image="rbxassetid://76287583641908",
+    ScaleType=Enum.ScaleType.Fit}, logo)
+
+local titleLbl = new("TextLabel", {Text="tuntung Hub", Font=Enum.Font.GothamBold, TextSize=15,
+    TextColor3=THEME.Accent, BackgroundTransparency=1, Size=UDim2.new(1,-100,0,20),
+    Position=UDim2.new(0,52,0,6), TextXAlignment=Enum.TextXAlignment.Left}, tb)
+new("TextLabel", {Text="Pet ESP", Font=Enum.Font.GothamMedium, TextSize=9,
+    TextColor3=THEME.TextDim, BackgroundTransparency=1, Size=UDim2.new(1,-100,0,12),
+    Position=UDim2.new(0,52,0,26), TextXAlignment=Enum.TextXAlignment.Left}, tb)
+
+local minBtn = new("TextButton", {Text="—", Font=Enum.Font.GothamBold, TextSize=18,
+    TextColor3=THEME.Text, BackgroundColor3=THEME.Bg3,
+    Size=UDim2.new(0,30,0,30), Position=UDim2.new(1,-38,0,9),
+    BorderSizePixel=0, ZIndex=5}, tb)
+round(minBtn, 8)
+
+do
+    local dragging, ds, sp
+    local function bd(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+            dragging = true; ds = i.Position; sp = main.Position
+        end
+    end
+    titleLbl.InputBegan:Connect(bd)
+    T.track(T.UserInputService.InputChanged:Connect(function(i)
+        if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+            local d = i.Position - ds
+            main.Position = UDim2.new(sp.X.Scale, sp.X.Offset+d.X, sp.Y.Scale, sp.Y.Offset+d.Y)
+        end
+    end))
+    T.track(T.UserInputService.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end))
+end
+
+local content = new("Frame", {Size=UDim2.new(1,0,1,-48), Position=UDim2.new(0,0,0,48), BackgroundTransparency=1}, main)
+
+local autoBtn = new("TextButton", {Name="AutoBtn", Text="▶ AUTO-FARM",
+    Font=Enum.Font.GothamBold, TextSize=12, TextColor3=THEME.Good,
+    BackgroundColor3=THEME.Bg3, Size=UDim2.new(1,-20,0,30),
+    Position=UDim2.new(0,10,0,8), BorderSizePixel=0, ZIndex=10,
+    AutoButtonColor=false}, content)
+round(autoBtn, 6)
+
+local sb = new("Frame", {Size=UDim2.new(1,-20,0,28), Position=UDim2.new(0,10,0,46),
+    BackgroundColor3=THEME.Bg2, BorderSizePixel=0}, content)
+round(sb, 8)
+local dot = new("Frame", {Size=UDim2.new(0,8,0,8), Position=UDim2.new(0,10,0.5,-4),
+    BackgroundColor3=THEME.Accent, BorderSizePixel=0}, sb)
+round(dot, 4)
+local status = new("TextLabel", {Text="Iniciando...", Font=Enum.Font.GothamMedium, TextSize=12,
+    TextColor3=THEME.Text, BackgroundTransparency=1, Size=UDim2.new(1,-30,1,0),
+    Position=UDim2.new(0,26,0,0), TextXAlignment=Enum.TextXAlignment.Left}, sb)
+
+local counter = new("TextLabel", {Text="0 pets", Font=Enum.Font.GothamBold, TextSize=11,
+    TextColor3=THEME.Gold, BackgroundTransparency=1, Size=UDim2.new(1,-60,0,16),
+    Position=UDim2.new(0,12,0,82), TextXAlignment=Enum.TextXAlignment.Left}, content)
+local refreshBtn = new("TextButton", {Text="⟳", Font=Enum.Font.GothamBold, TextSize=14,
+    TextColor3=THEME.Accent, BackgroundColor3=THEME.Bg2,
+    Size=UDim2.new(0,30,0,22), Position=UDim2.new(1,-42,0,80), BorderSizePixel=0}, content)
+round(refreshBtn, 6)
+
+local listF = new("ScrollingFrame", {Name="List", Size=UDim2.new(1,-20,1,-116),
+    Position=UDim2.new(0,10,0,106), BackgroundColor3=THEME.Bg2,
+    BorderSizePixel=0, ScrollBarThickness=4, ScrollBarImageColor3=THEME.Accent,
+    CanvasSize=UDim2.new(0,0,0,0), AutomaticCanvasSize=Enum.AutomaticSize.Y}, content)
+round(listF, 10)
+local pad = Instance.new("UIPadding", listF)
+pad.PaddingTop=UDim.new(0,8); pad.PaddingBottom=UDim.new(0,8)
+pad.PaddingLeft=UDim.new(0,8); pad.PaddingRight=UDim.new(0,8)
+local lay = Instance.new("UIListLayout", listF)
+lay.Padding = UDim.new(0,6); lay.SortOrder = Enum.SortOrder.LayoutOrder
+
+local minimized, fullSize = false, main.Size
+minBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    if minimized then
+        content.Visible = false; main.Size = UDim2.new(0,340,0,48); minBtn.Text = "+"
+    else
+        content.Visible = true; main.Size = fullSize; minBtn.Text = "—"
+    end
 end)
 
-for i, b in ipairs(BIOMES) do
-    local bt = new("TextButton",{Size=UDim2.new(0,80,0,34),BackgroundColor3=TH.Card,BorderSizePixel=0,Text=b.n,TextColor3=Color3.fromRGB(180,210,255),TextSize=9,Font=Enum.Font.GothamBold,AutoButtonColor=false,LayoutOrder=i},FC)
-    round(bt,8)
-    G.TrueChadHub.FB[b.n] = bt
-    bt.MouseButton1Click:Connect(function()
-        G.TrueChadHub.Filter = b.n
-        for k, x in pairs(G.TrueChadHub.FB) do sfb(x, k == b.n) end
-    end)
+T.UI.Gui, T.UI.Main, T.UI.Status, T.UI.Dot = gui, main, status, dot
+T.UI.Counter, T.UI.List, T.UI.Refresh, T.UI.MinBtn = counter, listF, refreshBtn, minBtn
+T.UI.Content, T.UI.AutoBtn = content, autoBtn
+T.setStatus = function(txt, color)
+    if T.UI.Status then T.UI.Status.Text = txt end
+    if T.UI.Dot and color then T.UI.Dot.BackgroundColor3 = color end
 end
+T.uiHelpers = { new=new, round=round, stroke=stroke }
 
--- ESP
-new("TextLabel",{Size=UDim2.new(1,0,0,22),BackgroundTransparency=1,Text="🥚 Ovos spawnados",TextColor3=TH.Blue,TextSize=11,Font=Enum.Font.GothamBold,TextXAlignment=Enum.TextXAlignment.Left,LayoutOrder=30},SC)
-local StatusL = new("TextLabel",{Size=UDim2.new(1,0,0,18),BackgroundTransparency=1,Text="Carregando...",TextColor3=TH.Gray,TextSize=10,Font=Enum.Font.Gotham,TextXAlignment=Enum.TextXAlignment.Left,LayoutOrder=31},SC)
+print("[2] OK → execute BLOCO 3")--[[ tuntung Hub — BLOCO 3/3 | RUNTIME ]]
+print("[3] BEGIN")
+local T = _G.Tuntung
+if not T or not T.UI.List then warn("[3] rode BLOCO 2"); return end
+local CONFIG, THEME, UI = T.CONFIG, T.THEME, T.UI
+local track = T.track
+local LP = T.LP
+local RunService, Workspace = T.RunService, T.Workspace
+local new, round, stroke = T.uiHelpers.new, T.uiHelpers.round, T.uiHelpers.stroke
+T.currentTrip = false
 
-local EC = new("Frame",{Size=UDim2.new(1,0,0,10),BackgroundTransparency=1,LayoutOrder=32,AutomaticSize=Enum.AutomaticSize.Y},SC)
-new("UIListLayout",{Padding=UDim.new(0,4),SortOrder=Enum.SortOrder.LayoutOrder},EC)
+--==================================================
+-- PREVIEW 3D
+--==================================================
+T.buildPreview = function(entry)
+    local size = UDim2.new(0, CONFIG.PreviewSize, 0, CONFIG.PreviewSize)
 
--- Abrir/fechar
-local isOpen = false
-local function toggle()
-    isOpen = not isOpen
-    if isOpen then
-        PN.Visible = true
-        PN.Size = UDim2.new(0,0,0,700)
-        TweenService:Create(PN,TweenInfo.new(0.25),{Size=UDim2.new(0,340,0,700)}):Play()
-    else
-        local t = TweenService:Create(PN,TweenInfo.new(0.2),{Size=UDim2.new(0,0,0,700)})
-        t:Play()
-        t.Completed:Connect(function() PN.Visible = false end)
+    if entry.Icon then
+        local box = new("Frame", {Size=size, BackgroundColor3=THEME.Bg3, BorderSizePixel=0})
+        round(box, 10); stroke(box, entry.Color or THEME.Accent, 1, 0.4)
+        new("ImageLabel", {BackgroundTransparency=1,
+            Size=UDim2.fromScale(0.9,0.9), Position=UDim2.fromScale(0.05,0.05),
+            Image=entry.Icon, ScaleType=Enum.ScaleType.Fit}, box)
+        return box
+    end
+
+    local inst = entry.Model or entry.Instance
+    if not inst or not inst.Parent then
+        local box = new("Frame", {Size=size, BackgroundColor3=THEME.Bg3, BorderSizePixel=0})
+        round(box, 10); stroke(box, entry.Color or THEME.Accent, 1, 0.4)
+        new("TextLabel", {Text="🐾", Font=Enum.Font.GothamBold, TextSize=24,
+            TextColor3=THEME.Gold, BackgroundTransparency=1, Size=UDim2.fromScale(1,1)}, box)
+        return box
+    end
+
+    local vp = new("ViewportFrame", {
+        Size=size, BackgroundColor3=THEME.Bg3, BorderSizePixel=0,
+        Ambient=Color3.fromRGB(215,215,215),
+        LightColor=Color3.fromRGB(255,255,255),
+        LightDirection=Vector3.new(0.4,-1,-0.6),
+    })
+    round(vp, 10); stroke(vp, entry.Color or THEME.Accent, 1, 0.4)
+
+    local world = new("WorldModel", {}, vp)
+    local cam = new("Camera", {}, vp)
+    vp.CurrentCamera = cam
+
+    pcall(function()
+        local cloned, bboxSize
+        if inst:IsA("BasePart") then
+            cloned = inst:Clone()
+            cloned.Anchored = true; cloned.CanCollide = false
+            cloned.CFrame = CFrame.new()
+            cloned.Parent = world
+            bboxSize = cloned.Size
+        elseif inst:IsA("Model") then
+            cloned = inst:Clone()
+            for _, p in ipairs(cloned:GetDescendants()) do
+                if p:IsA("BasePart") then
+                    p.Anchored = true; p.CanCollide = false
+                end
+            end
+            cloned.Parent = world
+            pcall(function() cloned:PivotTo(CFrame.new()) end)
+            local ok, s = pcall(function()
+                local _, sz = cloned:GetBoundingBox(); return sz
+            end)
+            bboxSize = (ok and s) or Vector3.new(2,2,2)
+        end
+        if not cloned or not bboxSize then return end
+        local cy = bboxSize.Y * 0.5
+        local maxDim = math.max(bboxSize.X, bboxSize.Y, bboxSize.Z, 1)
+        local dist = maxDim * 2.3
+        local camPos = Vector3.new(-dist*0.35, cy + bboxSize.Y*0.08, -dist*0.95)
+        cam.CFrame = CFrame.lookAt(camPos, Vector3.new(0, cy, 0))
+        cam.FieldOfView = 38
+    end)
+
+    return vp
+end
+local buildPreview = T.buildPreview
+
+--==================================================
+-- NOCLIP
+--==================================================
+local function noclipOn()
+    local c = LP.Character; if not c then return end
+    for _, p in ipairs(c:GetDescendants()) do
+        if p:IsA("BasePart") then pcall(function() p.CanCollide = false end) end
     end
 end
-TB.MouseButton1Click:Connect(toggle)
-CB.MouseButton1Click:Connect(function() if isOpen then toggle() end end)
-
-print("[HUB] GUI OK")
-
---==============================================================
--- 🛡️ GODMODE + TWEEN
---==============================================================
-local fly = {on=false, token=0, healConn=nil}
-
-local function enableGod(c, h)
-    pcall(function() h.MaxHealth = CFG.GodHealth h.Health = CFG.GodHealth end)
-    if fly.healConn then fly.healConn:Disconnect() end
-    fly.healConn = RunService.Heartbeat:Connect(function()
-        if not fly.on then return end
-        pcall(function()
-            if h.Health < CFG.GodHealth then h.Health = CFG.GodHealth end
-            if h.MaxHealth < CFG.GodHealth then h.MaxHealth = CFG.GodHealth end
-        end)
-    end)
-end
-
-local function disableGod(c)
-    if fly.healConn then fly.healConn:Disconnect() fly.healConn = nil end
-    if c then
-        local h = c:FindFirstChildOfClass("Humanoid")
-        if h then
-            pcall(function() h.MaxHealth = 100 h.Health = 100 end)
-        end
+local function noclipOff()
+    local c = LP.Character; if not c then return end
+    for _, p in ipairs(c:GetDescendants()) do
+        if p:IsA("BasePart") then pcall(function() p.CanCollide = true end) end
     end
 end
 
-local function moveTo(tx, tz, lbl)
-    if fly.on then return end
-    fly.on = true
-    fly.token = fly.token + 1
-    local tk = fly.token
-    print("[HUB] Movendo:", lbl or "")
-    
-    task.spawn(function()
-        local c, hrp = getHRP()
-        if not c or not hrp then fly.on = false return end
+--==================================================
+-- FLY
+--==================================================
+local function flyTo(pos, timeout)
+    timeout = timeout or 20
+    local hrp = T.getHRP()
+    local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+    if not hrp or not hum or hum.Health <= 0 then return false end
+    noclipOn()
+    pcall(function() hum.PlatformStand = true; hum.WalkSpeed = 0; hum.JumpPower = 0 end)
+    local t = 0; local reached = false
+    local conn
+    conn = RunService.Heartbeat:Connect(function(dt)
+        t = t + dt
+        if t > timeout then conn:Disconnect(); return end
+        local c = LP.Character
+        if not c or not hrp.Parent then conn:Disconnect(); return end
         local h = c:FindFirstChildOfClass("Humanoid")
-        if not h then fly.on = false return end
-        
-        pcall(function() hrp.Anchored = false h.PlatformStand = false end)
-        local ow = h.WalkSpeed
-        pcall(function() h.WalkSpeed = 0 h.PlatformStand = true end)
-        pcall(function() hrp:SetNetworkOwner(player) end)
-        enableGod(c, h)
-        
-        local old = hrp:FindFirstChild("TCBV")
-        if old then old:Destroy() end
-        
-        local bv = Instance.new("BodyVelocity")
-        bv.Name = "TCBV"
-        bv.MaxForce = Vector3.new(2e6, 0, 2e6)
-        bv.P = 15000
-        bv.Parent = hrp
-        
-        local t0 = tick()
-        while tk == fly.token do
-            if not hrp or not hrp.Parent then break end
-            if tick() - t0 > 60 then break end
-            local cp = hrp.Position
-            local dir = Vector3.new(tx, cp.Y, tz) - cp
-            local ds = dir.Magnitude
-            if ds < 8 then break end
-            local s = math.min(G.TrueChadHub.Speed or 250, ds * 2)
-            local u = Vector3.new(dir.X, 0, dir.Z).Unit
-            bv.Velocity = Vector3.new(u.X * s, 0, u.Z * s)
-            task.wait(0.03)
-        end
-        
-        bv:Destroy()
-        pcall(function() h.WalkSpeed = ow h.PlatformStand = false end)
-        fly.on = false
-        disableGod(c)
+        if not h or h.Health <= 0 then conn:Disconnect(); return end
+        noclipOn()
+        local cur = hrp.Position
+        local diff = pos - cur
+        local dist = diff.Magnitude
+        if dist <= CONFIG.ArriveDistance then reached = true; conn:Disconnect(); return end
+        local step = diff.Unit * math.min(CONFIG.FlySpeed * dt, dist)
+        hrp.CFrame = CFrame.new(cur + step)
+        pcall(function() h:ChangeState(Enum.HumanoidStateType.Freefall) end)
     end)
-    
-    while fly.on do task.wait(0.1) end
+    while conn.Connected do RunService.Heartbeat:Wait() end
+    noclipOff()
+    pcall(function()
+        hum.PlatformStand = false
+        hum.WalkSpeed = 16; hum.JumpPower = 50
+        hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+        task.wait(0.05)
+        hum:ChangeState(Enum.HumanoidStateType.Running)
+    end)
+    return reached
+end
+T.flyTo = flyTo
+
+--==================================================
+-- HIGHLIGHT
+--==================================================
+local function applyHighlight(inst)
+    if not inst or T._hl[inst] then return end
+    local ok, h = pcall(function()
+        local hh = Instance.new("Highlight")
+        hh.FillColor=THEME.Gold; hh.FillTransparency=0.55
+        hh.OutlineColor=THEME.Accent; hh.OutlineTransparency=0
+        hh.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop
+        hh.Adornee=inst; hh.Parent=inst
+        return hh
+    end)
+    if ok and h then T._hl[inst] = h end
+end
+local function clearHighlights()
+    for _, h in pairs(T._hl) do pcall(function() h:Destroy() end) end
+    for k in pairs(T._hl) do T._hl[k] = nil end
 end
 
-local function vert(ty)
-    if fly.on then return end
-    fly.on = true
-    fly.token = fly.token + 1
-    local tk = fly.token
-    
+--==================================================
+-- INTERAÇÃO
+--==================================================
+local function tryInteract(entry)
+    if not entry or not entry.Instance then return false end
+    local prompt = entry.Instance:FindFirstChildOfClass("ProximityPrompt")
+        or entry.Instance:FindFirstChildWhichIsA("ProximityPrompt", true)
+    if prompt and prompt.Enabled then
+        local d = math.max(prompt.HoldDuration or 0, CONFIG.HoldTime)
+        pcall(function() prompt:InputHoldBegin() end)
+        task.wait(d)
+        pcall(function() prompt:InputHoldEnd() end)
+        pcall(function() if fireproximityprompt then fireproximityprompt(prompt) end end)
+        return true
+    end
+    local cd = entry.Instance:FindFirstChildOfClass("ClickDetector")
+        or entry.Instance:FindFirstChildWhichIsA("ClickDetector", true)
+    if cd and fireclickdetector then pcall(fireclickdetector, cd); return true end
+    return false
+end
+
+--==================================================
+-- CICLO
+--==================================================
+local function doCycle(entry)
+    local hrp = T.getHRP(); if not hrp then return false end
+    T.setStatus("Indo → "..entry.Name, THEME.Accent)
+    if not flyTo(entry.Position, 20) then T.setStatus("Falha", THEME.Bad); return false end
+    T.setStatus("Aguardando...", THEME.Warn)
+    task.wait(CONFIG.WaitBeforeCollect)
+    if not T.isAlive() then return false end
+    T.setStatus("Coletando...", THEME.Good)
+    tryInteract(entry)
+    task.wait(0.8)
+    T.setStatus("Voltando...", THEME.Accent)
+    local h = T.getHRP()
+    if h then
+        local ey = h.Position.Y + CONFIG.UpStuds
+        flyTo(Vector3.new(h.Position.X, ey, h.Position.Z), 10)
+        flyTo(Vector3.new(CONFIG.FixedDest.X, ey, CONFIG.FixedDest.Z), 25)
+        flyTo(CONFIG.FixedDest, 10)
+    end
+    T.setStatus("Concluído!", THEME.Good)
+    return true
+end
+
+T.startFlyTo = function(entry)
+    if T.currentTrip then return end
+    T.currentTrip = true
     task.spawn(function()
-        local c, hrp = getHRP()
-        if not c or not hrp then fly.on = false return end
-        local h = c:FindFirstChildOfClass("Humanoid")
-        if not h then fly.on = false return end
-        
-        pcall(function() hrp.Anchored = false end)
-        local ow = h.WalkSpeed
-        pcall(function() h.WalkSpeed = 0 h.PlatformStand = true end)
-        pcall(function() hrp:SetNetworkOwner(player) end)
-        enableGod(c, h)
-        
-        local old = hrp:FindFirstChild("TCBV")
-        if old then old:Destroy() end
-        
-        local bv = Instance.new("BodyVelocity")
-        bv.Name = "TCBV"
-        bv.MaxForce = Vector3.new(0, 2e6, 0)
-        bv.P = 15000
-        bv.Parent = hrp
-        
-        local t0 = tick()
-        while tk == fly.token do
-            if not hrp or not hrp.Parent then break end
-            if tick() - t0 > 10 then break end
-            local yd = ty - hrp.Position.Y
-            if math.abs(yd) < 1.5 then break end
-            local vy = m
+        pcall(doCycle, entry)
+        T.currentTrip = false
+    end)
+end
+
+--==================================================
+-- RENDER
+--==================================================
+local function clearList()
+    for _, c in ipairs(UI.List:GetChildren()) do
+        if c:IsA("Frame") or c:IsA("TextButton") then c:Destroy() end
+    end
+end
+
+local function makeCard(entry, idx)
+    local card = new("Frame", {
+        Size=UDim2.new(1,-4,0,CONFIG.PreviewSize+16),
+        BackgroundColor3=(idx==1) and Color3.fromRGB(255,245,220) or THEME.Bg3,
+        BorderSizePixel=0, LayoutOrder=idx,
+    }, UI.List)
+    round(card, 10)
+    if idx == 1 then stroke(card, THEME.Gold, 1, 0.35) end
+
+    local preview = buildPreview(entry)
+    preview.Position = UDim2.new(0,8,0.5,-CONFIG.PreviewSize/2)
+    previe
